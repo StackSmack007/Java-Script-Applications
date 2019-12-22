@@ -3,10 +3,8 @@ import { fd_get, fd_post, fd_put } from "./fetcher.js";
 const get = fd_get.bind(undefined, undefined, undefined, undefined);
 const post = fd_post.bind(undefined, undefined, undefined, undefined);
 const put = fd_put.bind(undefined, undefined, undefined, undefined);
-// contentType,
-// authType,
-// endPoint,
-// data
+// contentType,// authType,// endPoint,// data
+
 let partials = {
   header: "../templates/common/header.hbs",
   footer: "../templates/common/footer.hbs"
@@ -14,73 +12,61 @@ let partials = {
 
 var app = Sammy("#main", function() {
   this.use("Handlebars", "hbs");
-  this.get("/", goToIndex);
-  this.get("/home", goToIndex);
-  this.get("/about", goToAbout);
-  this.get("/register", goToRegister);
-  this.get("/login", goToLogin);
-  this.get("/logout", logof.bind(undefined, "/"));
+  this.get("/", getIndex);
+  this.get("/home", getIndex);
+  this.get("/about", getAbout);
+
+  this.get("/register", getRegister);
   this.post("/register", postRegistration);
+  this.get("/login", getLogin);
   this.post("/login", postLogin);
-  this.get("/catalog", goToCatalog);
-  this.get("/create-team", goToCatalogCreate);
+  this.get("/logout", logof.bind(undefined, "/"));
+
+  this.get("/catalog", getCatalog);
+  this.get("/create-team", getCatalogCreate);
   this.post("/create-team", postTeam);
-  this.get("/catalog/:id", goToTeamDetails);
+  this.get("/catalog/:id", getTeamDetails);
   this.get("/leaveTeam", leaveTeamAny.bind(undefined, "/catalog"));
   this.get("/joinTeam/:id", joinTeam.bind(undefined, "/catalog"));
-  this.get("/editTeam/:id", goToEditTeam);
+  this.get("/editTeam/:id", getEditTeam);
   this.post("/editTeam/:id", postEditedTeam.bind(undefined, "/catalog"));
 });
 
-function postEditedTeam(route = "", ctx) {
-  retrieveCurrentUserData(ctx);
-  const teamId = ctx.params.id;
-  get("appdata", "kinvey", "/teams/" + teamId).then(({ players }) => {
-    put("appdata", "kinvey", "/teams/" + teamId, {
-      players,
-      name: ctx.params.name,
-      comment: ctx.params.comment
-    }).then(() => {
-      if (route !== "") {
-        ctx.redirect(route + "/" + teamId);
-      }
-    });
-  });
+var userManager = {
+  retrieveCurrentUserData: function retrieveCurrentUserData(ctx) {
+    const authtoken = localStorage.getItem("authtoken");
+    if (authtoken !== null) {
+      ctx.loggedIn = true;
+      ctx["authtoken"] = authtoken;
+      ctx["username"] = localStorage.getItem("username");
+      ctx["userId"] = localStorage.getItem("userId");
+      return ctx;
+    }
+    return undefined;
+  },
+
+  setUserDataInStorage: function(obj) {
+    localStorage["authtoken"] = obj._kmd.authtoken;
+    localStorage["username"] = obj.username;
+    localStorage["userId"] = obj._id;
+    console.log("User Data set in storage!");
+  },
+
+  clearSessionData: function() {
+    return localStorage.clear();
+  }
+};
+function logof(returnPath, ctx) {
+  userManager.clearSessionData();
+  ctx.redirect(returnPath);
 }
 
-function goToEditTeam(ctx) {
-  retrieveCurrentUserData(ctx);
-  partials["editForm"] = "../templates/edit/editForm.hbs";
-  get("appdata", "kinvey", "/teams/" + ctx.params.id).then(data => {
-    ctx["name"] = data.name;
-    ctx["id"] = data._id;
-    ctx["comment"] = data.comment;
-    this.loadPartials(partials).then(function() {
-      this.partial("../templates/edit/editPage.hbs");
-    });
-  });
-}
-
-function goToIndex(ctx) {
-  retrieveCurrentUserData(ctx);
-  this.loadPartials(partials).then(function() {
-    this.partial("../templates/home/home.hbs");
-  });
-}
-
-function goToAbout(ctx) {
-  retrieveCurrentUserData(ctx);
-  this.loadPartials(partials).then(function() {
-    this.partial("../templates/about/about.hbs");
-  });
-}
-
-function goToRegister(ctx) {
-  retrieveCurrentUserData(ctx);
+function getRegister(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
   if (typeof ctx.authtoken !== "undefined") {
     alert("Only unlogged users can register!");
     if (confirm("Do you wish to Log off?")) {
-      logof("/register", ctx);
+      userManager.logof("/register", ctx);
     }
     return;
   }
@@ -88,11 +74,6 @@ function goToRegister(ctx) {
   this.loadPartials(partials).then(function() {
     this.partial("../templates/register/registerPage.hbs");
   });
-}
-
-function logof(returnPath, ctx) {
-  clearSessionData();
-  ctx.redirect(returnPath);
 }
 
 function postRegistration(ctx) {
@@ -105,7 +86,7 @@ function postRegistration(ctx) {
     alert("Name must be atleast 4 symbols!");
   } else {
     post("user", "basic", "/", { username: name, password: pas1 })
-      .then(setUserDataInStorage)
+      .then(userManager.setUserDataInStorage)
       .then(() => {
         ctx.redirect("/");
       })
@@ -113,16 +94,15 @@ function postRegistration(ctx) {
   }
 }
 
-function goToLogin(ctx) {
-  retrieveCurrentUserData(ctx);
+function getLogin(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
   if (typeof ctx.username !== "undefined") {
     alert("You are currently loged in as: " + ctx.username);
     if (confirm("Do you wish to Log off?")) {
-      logof("/login", ctx);
+      userManager.logof("/login", ctx);
     }
     return;
   }
-
   partials["loginForm"] = "../templates/login/loginForm.hbs";
   this.loadPartials(partials).then(function() {
     this.partial("../templates/login/loginPage.hbs");
@@ -137,7 +117,7 @@ function postLogin(ctx) {
     alert("Password must be atleast 4 symbols!");
   } else {
     post("user", "basic", "/login", { username, password })
-      .then(setUserDataInStorage)
+      .then(userManager.setUserDataInStorage)
       .then(() => ctx.redirect("/"))
       .catch(e => {
         alert("Username or Password Mismatch!");
@@ -145,8 +125,23 @@ function postLogin(ctx) {
   }
 }
 
-function goToCatalog(ctx) {
-  retrieveCurrentUserData(ctx);
+//-----------------------------------------------------------------------------------
+function getIndex(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
+  this.loadPartials(partials).then(function() {
+    this.partial("../templates/home/home.hbs");
+  });
+}
+
+function getAbout(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
+  this.loadPartials(partials).then(function() {
+    this.partial("../templates/about/about.hbs");
+  });
+}
+
+function getCatalog(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
   partials["team"] = "../templates/catalog/team.hbs";
   get("appdata", "kinvey", "teams")
     .then(data => {
@@ -164,8 +159,8 @@ function goToCatalog(ctx) {
     });
 }
 
-function goToCatalogCreate(ctx) {
-  retrieveCurrentUserData(ctx);
+function getCatalogCreate(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
   partials["createForm"] = "../templates/create/createForm.hbs";
   this.loadPartials(partials).then(function() {
     this.partial("../templates/create/createPage.hbs");
@@ -174,7 +169,7 @@ function goToCatalogCreate(ctx) {
 
 function postTeam(ctx) {
   const { name, comment } = ctx.params;
-  const { username, userId } = retrieveCurrentUserData({});
+  const { username, userId } = userManager.retrieveCurrentUserData({});
   const players = [{ username, userId }];
   const newTeam = { name, comment, players };
 
@@ -183,20 +178,8 @@ function postTeam(ctx) {
   );
 }
 
-function retrieveCurrentUserData(ctx) {
-  const authtoken = localStorage.getItem("authtoken");
-  if (authtoken !== null) {
-    ctx.loggedIn = true;
-    ctx["authtoken"] = authtoken;
-    ctx["username"] = localStorage.getItem("username");
-    ctx["userId"] = localStorage.getItem("userId");
-    return ctx;
-  }
-  return undefined;
-}
-
-function goToTeamDetails(ctx) {
-  retrieveCurrentUserData(ctx);
+function getTeamDetails(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
   partials["teamMember"] = "../templates/catalog/teamMember.hbs";
   partials["teamControls"] = "../templates/catalog/teamControls.hbs";
 
@@ -214,7 +197,7 @@ function goToTeamDetails(ctx) {
 }
 
 function leaveTeamAny(route = "", ctx) {
-  retrieveCurrentUserData(ctx);
+  userManager.retrieveCurrentUserData(ctx);
   get("appdata", "kinvey", "teams")
     .then(data => {
       let joinedTeam = data.find(x =>
@@ -242,7 +225,7 @@ function leaveTeamAny(route = "", ctx) {
 }
 
 function joinTeam(route = "", ctx) {
-  retrieveCurrentUserData(ctx);
+  userManager.retrieveCurrentUserData(ctx);
   leaveTeamAny("", ctx);
   const teamId = ctx.params.id;
   get("appdata", "kinvey", "teams/" + teamId)
@@ -263,16 +246,36 @@ function joinTeam(route = "", ctx) {
     .catch(e => console.log(e));
 }
 
-function setUserDataInStorage(obj) {
-  localStorage["authtoken"] = obj._kmd.authtoken;
-  localStorage["username"] = obj.username;
-  localStorage["userId"] = obj._id;
-  console.log("User Data set in storage!");
+function getEditTeam(ctx) {
+  userManager.retrieveCurrentUserData(ctx);
+  partials["editForm"] = "../templates/edit/editForm.hbs";
+  get("appdata", "kinvey", "/teams/" + ctx.params.id).then(data => {
+    ctx["name"] = data.name;
+    ctx["id"] = data._id;
+    ctx["comment"] = data.comment;
+    this.loadPartials(partials).then(function() {
+      this.partial("../templates/edit/editPage.hbs");
+    });
+  });
 }
 
-function clearSessionData() {
-  return localStorage.clear();
+function postEditedTeam(route = "", ctx) {
+  userManager.retrieveCurrentUserData(ctx);
+  const teamId = ctx.params.id;
+  get("appdata", "kinvey", "/teams/" + teamId).then(({ players }) => {
+    put("appdata", "kinvey", "/teams/" + teamId, {
+      players,
+      name: ctx.params.name,
+      comment: ctx.params.comment
+    }).then(() => {
+      if (route !== "") {
+        ctx.redirect(route + "/" + teamId);
+      }
+    });
+  });
 }
 
-clearSessionData();
-app.run("/home");
+(function Main() {
+  userManager.clearSessionData();
+  app.run("/home");
+})();

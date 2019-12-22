@@ -1,14 +1,13 @@
 <div class="container">
     {{> header}}
     {{#if teamLess}}
-        <a href="/create-team" class="btn btn-default">Create Team</a>
+    <a href="/create-team" class="btn btn-success">Create Team</a>
     {{/if}}
     <h1>Catalog Page</h1>
     <div>
         {{#each teams}}
-            {{> team}}
+        {{> team}}
         {{/each}}
     </div>
 </div>
-
-{{> footer}}
+    {{> footer}}
