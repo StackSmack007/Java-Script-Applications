@@ -14,7 +14,12 @@ const validateStatus = function(res) {
   }
 };
 
-const getJsonParsed = r => r.json();
+const getJsonParsed = r => {
+  if (r.status === 204) {
+    return;
+  }
+  return r.json();
+};
 const errorHandler = e => {
   console.log(e);
   throw new Error(e);
@@ -31,7 +36,10 @@ function makeContent(authType, method, data) {
     content["headers"]["authorization"] = authentications[authType]();
   }
   content["method"] = method;
-  if (allowedMethods.slice(0, 2).includes(method)) {
+  if (
+    allowedMethods.slice(0, 2).includes(method) &&
+    typeof data !== "undefined"
+  ) {
     content["headers"]["content-type"] = "application/json";
     content["body"] = JSON.stringify(data);
     content["headers"]["content-length"] = content["body"].length;
@@ -49,10 +57,7 @@ function makeRequest(
   endPoint,
   data
 ) {
-  console.log(
-    generateUrl(contentType, endPoint),
-    JSON.stringify(makeContent(authType, method, data))
-  );
+  // console.log(generateUrl(contentType, endPoint),JSON.stringify(makeContent(authType, method, data)));
 
   return fetch(
     generateUrl(contentType, endPoint),
@@ -67,8 +72,3 @@ export const fd_get = makeRequest.bind(undefined, "GET");
 export const fd_post = makeRequest.bind(undefined, "POST");
 export const fd_put = makeRequest.bind(undefined, "PUT");
 export const fd_delete = makeRequest.bind(undefined, "DELETE");
-
-// export  const fu_get = makeRequest.bind(undefined, "GET", "user");
-// export  const fu_post = makeRequest.bind(undefined, "POST", "user");
-// export  const fu_put = makeRequest.bind(undefined, "PUT", "user");
-// export  const fu_delete = makeRequest.bind(undefined, "DELETE", "user");

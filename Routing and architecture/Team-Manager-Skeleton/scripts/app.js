@@ -1,14 +1,6 @@
-import { fd_get, fd_post, fd_put } from "./fetcher.js";
-
-const get = fd_get.bind(undefined, undefined, undefined, undefined);
-const post = fd_post.bind(undefined, undefined, undefined, undefined);
-const put = fd_put.bind(undefined, undefined, undefined, undefined);
-// contentType,// authType,// endPoint,// data
-
-let partials = {
-  header: "../templates/common/header.hbs",
-  footer: "../templates/common/footer.hbs"
-};
+"use strct";
+import * as accountController from "./accountControler.js";
+import { userManager, partials, get, post, put } from "./controler_base.js";
 
 var app = Sammy("#main", function() {
   this.use("Handlebars", "hbs");
@@ -16,11 +8,11 @@ var app = Sammy("#main", function() {
   this.get("/home", getIndex);
   this.get("/about", getAbout);
 
-  this.get("/register", getRegister);
-  this.post("/register", postRegistration);
-  this.get("/login", getLogin);
-  this.post("/login", postLogin);
-  this.get("/logout", logof.bind(undefined, "/"));
+  this.get("/register", accountController.getRegister);
+  this.post("/register", accountController.postRegistration);
+  this.get("/login", accountController.getLogin);
+  this.post("/login", accountController.postLogin);
+  this.get("/logout", accountController.logoff.bind(undefined, "/"));
 
   this.get("/catalog", getCatalog);
   this.get("/create-team", getCatalogCreate);
@@ -32,105 +24,9 @@ var app = Sammy("#main", function() {
   this.post("/editTeam/:id", postEditedTeam.bind(undefined, "/catalog"));
 });
 
-var userManager = {
-  retrieveCurrentUserData: function retrieveCurrentUserData(ctx) {
-    const authtoken = localStorage.getItem("authtoken");
-    if (authtoken !== null) {
-      ctx.loggedIn = true;
-      ctx["authtoken"] = authtoken;
-      ctx["username"] = localStorage.getItem("username");
-      ctx["userId"] = localStorage.getItem("userId");
-      return ctx;
-    }
-    return undefined;
-  },
-
-  setUserDataInStorage: function(obj) {
-    localStorage["authtoken"] = obj._kmd.authtoken;
-    localStorage["username"] = obj.username;
-    localStorage["userId"] = obj._id;
-    console.log("User Data set in storage!");
-  },
-
-  clearSessionData: function() {
-    return localStorage.clear();
-  }
-};
-function logof(returnPath, ctx) {
-  userManager.clearSessionData();
-  ctx.redirect(returnPath);
-}
-
-function getRegister(ctx) {
-  userManager.retrieveCurrentUserData(ctx);
-  if (typeof ctx.authtoken !== "undefined") {
-    alert("Only unlogged users can register!");
-    if (confirm("Do you wish to Log off?")) {
-      userManager.logof("/register", ctx);
-    }
-    return;
-  }
-  partials["registerForm"] = "../templates/register/registerForm.hbs";
-  this.loadPartials(partials).then(function() {
-    this.partial("../templates/register/registerPage.hbs");
-  });
-}
-
-function postRegistration(ctx) {
-  const { name, pas1, pas2 } = ctx.params;
-  if (pas1 !== pas2) {
-    alert("passwords mismatch");
-  } else if (pas1.length < 4) {
-    alert("Password must be atleast 4 symbols!");
-  } else if (name.length < 4) {
-    alert("Name must be atleast 4 symbols!");
-  } else {
-    post("user", "basic", "/", { username: name, password: pas1 })
-      .then(userManager.setUserDataInStorage)
-      .then(() => {
-        ctx.redirect("/");
-      })
-      .catch(e => alert("Choose different UserName!"));
-  }
-}
-
-function getLogin(ctx) {
-  userManager.retrieveCurrentUserData(ctx);
-  if (typeof ctx.username !== "undefined") {
-    alert("You are currently loged in as: " + ctx.username);
-    if (confirm("Do you wish to Log off?")) {
-      userManager.logof("/login", ctx);
-    }
-    return;
-  }
-  partials["loginForm"] = "../templates/login/loginForm.hbs";
-  this.loadPartials(partials).then(function() {
-    this.partial("../templates/login/loginPage.hbs");
-  });
-}
-
-function postLogin(ctx) {
-  const { username, password } = ctx.params;
-  if (username.length < 4) {
-    alert("Username must be atleast 4 symbols");
-  } else if (password.length < 4) {
-    alert("Password must be atleast 4 symbols!");
-  } else {
-    post("user", "basic", "/login", { username, password })
-      .then(userManager.setUserDataInStorage)
-      .then(() => ctx.redirect("/"))
-      .catch(e => {
-        alert("Username or Password Mismatch!");
-      });
-  }
-}
-
-//-----------------------------------------------------------------------------------
 function getIndex(ctx) {
   userManager.retrieveCurrentUserData(ctx);
-  this.loadPartials(partials).then(function() {
-    this.partial("../templates/home/home.hbs");
-  });
+  this.loadPartials(partials).partial("../templates/home/home.hbs");
 }
 
 function getAbout(ctx) {

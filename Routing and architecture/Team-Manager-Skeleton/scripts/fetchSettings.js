@@ -16,5 +16,5 @@ export const generateUrl = (contentType, endPoint) => {
 
 export const authenticationsFor = {
   basic:()=> "Basic " + btoa(`${appId}:${appSecret}`),
-  kinvey:()=> "Kinvey " + localStorage.getItem("authtoken")
+  kinvey:()=> "Kinvey " + sessionStorage.getItem("authtoken")
 };
