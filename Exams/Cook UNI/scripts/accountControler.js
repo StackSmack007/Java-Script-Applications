@@ -36,17 +36,24 @@ export function postRegistration(ctx) {
   } else if (username.length < 3) {
     alert("Username must contain atleast 3 symbols!");
   } else {
-    post("user", "basic", "/", {
-      username,
-      firstName,
-      lastName,
-      password
-    })
-      .then(userManager.setUserDataInStorage)
-      .then(() => {
-        ctx.redirect("/");
-      })
-      .catch(e => alert("Choose different UserName!"));
+    post("rpc", "basic", "/check-username-exists", { username })
+    .then(({ usernameExists }) => {
+        if (usernameExists) {
+          alert(`Choose different UserName!\n${username} is taken!`);
+          return;
+        }
+        post("user", "basic", "/", {
+          username,
+          firstName,
+          lastName,
+          password
+        })
+          .then(userManager.setUserDataInStorage)
+          .then(() => {
+            ctx.redirect("/");
+          });
+      }
+    );
   }
 }
 

@@ -2,7 +2,7 @@ const appId = "kid_ryOwp8Jk8";
 const appSecret = "1f16b7b1b4974bf497347859d1c31aac";
 const baseURL = "https://baas.kinvey.com/";
 
-const allowedContentTypes = ["user", "appdata"];
+const allowedContentTypes = ["user", "appdata","rpc"];
 
 export const generateUrl = (contentType, endPoint) => {
   if (!allowedContentTypes.includes(contentType)) {
