@@ -40,8 +40,8 @@ window.addEventListener("resize", function() {
 const hoverSettings = {
   maxRk: 5,
   range: 6,
-  growSpeed: 8,
-  shrinkSpeed: 2
+  growSpeed: 4,
+  shrinkSpeed: 1
 };
 
 class Buble {
@@ -172,5 +172,5 @@ function generateBubles(n, size, speed, colors, filled = false) {
 }
 
 (function Main() {
-  generateBubles(300, 50, 6, colors, true);
+  generateBubles(400, 60, 6, colors, true);
 })();
